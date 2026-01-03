@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func connectbd() { //для теста подключения, потом надо удалить
+func connectBD() (*pgx.Conn, error) { //для теста подключения, потом надо удалить
 	// Строка подключения
 	connStr := "postgres://postgres:postgres@localhost:5432/sensors?sslmode=disable"
 
@@ -25,25 +25,20 @@ func connectbd() { //для теста подключения, потом над
 	err = conn.Ping(ctx)
 	if err != nil {
 		fmt.Printf("Ошибка ping: %v\n", err)
-		return
+		return nil, err
 	}
 
 	fmt.Println("Подключение успешно!")
+	return pgx.Connect(context.Background(), connStr)
 }
 
 func selectBdRooms() {
-	// Строка подключения
-	connStr := "postgres://postgres:postgres@localhost:5432/sensors?sslmode=disable"
-
-	// Подключение
-	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, connStr)
+	conn, err := connectBD()
 	if err != nil {
-		fmt.Printf("Не удалось подключиться: %v\n", err)
-		os.Exit(1)
+		fmt.Printf("Ошибка подключения: %v\n", err)
+		return
 	}
-	defer conn.Close(ctx)
-
+	defer conn.Close(context.Background())
 	rows, err := conn.Query(context.Background(), "select * from rooms")
 	if err != nil {
 		fmt.Printf("Ошибка: %v\n", err)
@@ -62,20 +57,19 @@ func selectBdRooms() {
 		}
 		fmt.Printf("Температура в комнате #%s с  %d до %d\n", room_name, temp_lo, temp_hi)
 	}
+
 }
 
 func main() {
 	var homeOption int
 	for {
-		fmt.Println("Введите 1 для теста подключения базы данных, 2 для получения температуры в спальне, 3 для выхода:")
+		fmt.Println("Введите 1 для получения температуры в спальне, 2 для выхода:")
 
 		fmt.Scan(&homeOption)
 		switch homeOption {
 		case 1:
-			connectbd()
-		case 2:
 			selectBdRooms()
-		case 3:
+		case 2:
 			fmt.Println("До свидания!")
 			return
 		default:
